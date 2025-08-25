@@ -1,0 +1,82 @@
+# Django Settings
+SECRET_KEY=your-super-secret-key-change-this-in-production
+DEBUG=True
+TIME_ZONE=Asia/Kolkata
+
+# Database Configuration
+DB_NAME=zbooks_db
+DB_USER=zbooks_user
+DB_PASSWORD=zbooks_password
+DB_HOST=localhost
+DB_PORT=3306
+
+# CORS Settings
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000
+
+# JWT Settings
+JWT_SECRET_KEY=your-jwt-secret-key-change-this
+JWT_ACCESS_TOKEN_LIFETIME=60
+JWT_REFRESH_TOKEN_LIFETIME=1440
+
+# Email Settings (for notifications)
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=your-email@gmail.com
+EMAIL_HOST_PASSWORD=your-app-password
+EMAIL_FROM=noreply@zbooks.com
+
+# File Storage
+MEDIA_ROOT=media/
+STATIC_ROOT=static/
+AWS_ACCESS_KEY_ID=your-aws-access-key
+AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+AWS_STORAGE_BUCKET_NAME=your-bucket-name
+AWS_S3_REGION_NAME=us-east-1
+
+# Redis (for caching and background tasks)
+REDIS_URL=redis://localhost:6379/0
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
+
+# Payment Gateway (example)
+STRIPE_PUBLIC_KEY=pk_test_your-stripe-public-key
+STRIPE_SECRET_KEY=sk_test_your-stripe-secret-key
+STRIPE_WEBHOOK_SECRET=whsec_your-webhook-secret
+
+# SMS Gateway (for reminders)
+TWILIO_ACCOUNT_SID=your-twilio-sid
+TWILIO_AUTH_TOKEN=your-twilio-token
+TWILIO_PHONE_NUMBER=+1234567890
+
+# Google Services
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Microsoft Services
+MICROSOFT_CLIENT_ID=your-microsoft-client-id
+MICROSOFT_CLIENT_SECRET=your-microsoft-client-secret
+
+# Bank Integration
+PLAID_CLIENT_ID=your-plaid-client-id
+PLAID_SECRET=your-plaid-secret
+PLAID_ENV=sandbox
+
+# Analytics
+GOOGLE_ANALYTICS_ID=GA-XXXXXXXXX
+MIXPANEL_TOKEN=your-mixpanel-token
+
+# Monitoring
+SENTRY_DSN=your-sentry-dsn
+LOG_LEVEL=INFO
+
+# Security
+CSRF_TRUSTED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+SECURE_SSL_REDIRECT=False
+SESSION_COOKIE_SECURE=False
+CSRF_COOKIE_SECURE=False
+
+# Development
+DJANGO_SETTINGS_MODULE=core.settings
+USE_TZ=True
+LANGUAGE_CODE=en-us

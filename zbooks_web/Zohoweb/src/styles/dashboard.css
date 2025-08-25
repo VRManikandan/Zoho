@@ -1,0 +1,89 @@
+/* Dashboard Styles */
+.dashboard {
+  padding: 24px;
+}
+
+.dashboard-header {
+  margin-bottom: 16px;
+}
+
+.stats-row .stat-card {
+  height: 100%;
+}
+
+.stat-change {
+  margin-top: 8px;
+  color: #595959;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.charts-row .chart-card,
+.activity-row .activity-card,
+.quick-actions-card,
+.system-status-card {
+  height: 100%;
+}
+
+.revenue-chart .chart-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  color: #8c8c8c;
+}
+
+.collection-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 220px;
+  justify-content: center;
+}
+
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.status-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+
+.status-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.status-icon.success { background: #f6ffed; color: #52c41a; }
+.status-icon.warning { background: #fff7e6; color: #fa8c16; }
+
+.dashboard-loading,
+.dashboard-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .dashboard { padding: 16px; }
+}
+
+

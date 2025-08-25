@@ -23,6 +23,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # Third-party
+    'rest_framework',
+    'drf_spectacular',
+    'corsheaders',
+    'django_filters',
+    # First-party apps
     'accounts',
     'banking',
     'catalog',
@@ -37,7 +43,13 @@ INSTALLED_APPS = [
     'items', 
     'taxes',  
     'notifications', 
-    'reminders',  
+    'reminders',
+    'purchases',
+    'projects',
+    'inventory',
+    'dashboard',
+    'reports',
+    'settings_app',
 ]
 
 # Templates
@@ -109,10 +121,11 @@ SPECTACULAR_SETTINGS = {
 }
 
 # CORS
-CORS_ALLOWED_ORIGINS = [o.strip() for o in env("ALLOWED_ORIGINS").split(",")]
+CORS_ALLOWED_ORIGINS = [o.strip() for o in env("ALLOWED_ORIGINS", default="http://localhost:5173").split(",")]
 
 # Static & Media (Optional, but recommended)
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
