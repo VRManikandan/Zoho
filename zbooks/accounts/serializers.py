@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User
+from .models import ChartOfAccounts, JournalEntry, JournalEntryLine, User
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
