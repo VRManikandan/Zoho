@@ -9,7 +9,7 @@ import {
   Alert,
   InputAdornment,
 } from '@mui/material';
-import { Mail, Lock } from '@mui/icons-material';
+import { Mail, Lock, PhoneIphone, Verified } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -19,6 +19,9 @@ const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [values, setValues] = useState({ email: '', password: '' });
+  const [otpMode, setOtpMode] = useState(false);
+  const [otpDestination, setOtpDestination] = useState('');
+  const [otpCode, setOtpCode] = useState('');
 
   const handleChange = (e) => {
     setValues({ ...values, [e.target.name]: e.target.value });
@@ -29,6 +32,20 @@ const Login = () => {
     setLoading(true);
     setErrorMessage('');
     try {
+      if (otpMode) {
+        // OTP verify
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/auth/otp/verify/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ destination: otpDestination, code: otpCode })
+        });
+        if (!res.ok) throw new Error('OTP verification failed');
+        const data = await res.json();
+        localStorage.setItem('access_token', data.access);
+        localStorage.setItem('refresh_token', data.refresh);
+        navigate('/dashboard');
+        return;
+      }
       const result = await login(values);
       if (result.success) {
         navigate('/dashboard');
@@ -37,6 +54,24 @@ const Login = () => {
       }
     } catch (error) {
       setErrorMessage('An error occurred during login');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const requestOtp = async () => {
+    setLoading(true);
+    setErrorMessage('');
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/auth/otp/request/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ destination: otpDestination })
+      });
+      if (!res.ok) throw new Error('Failed to send OTP');
+      setOtpMode(true);
+    } catch (e) {
+      setErrorMessage(e.message);
     } finally {
       setLoading(false);
     }
@@ -69,6 +104,7 @@ const Login = () => {
           </Alert>
         )}
 
+        {!otpMode && (
         <form onSubmit={handleSubmit}>
           <TextField
             fullWidth
@@ -119,6 +155,44 @@ const Login = () => {
             {loading ? 'Signing in...' : 'Sign In'}
           </Button>
         </form>
+        )}
+
+        {/* OTP Login */}
+        {otpMode ? (
+          <>
+            <TextField
+              fullWidth
+              name="otp"
+              value={otpCode}
+              onChange={(e)=>setOtpCode(e.target.value)}
+              label="Enter OTP"
+              margin="normal"
+              variant="outlined"
+              required
+              InputProps={{ startAdornment: (<InputAdornment position="start"><Verified /></InputAdornment>) }}
+            />
+            <Button onClick={handleSubmit} variant="contained" fullWidth sx={{ mt: 2 }} disabled={loading}>
+              Verify & Sign In
+            </Button>
+          </>
+        ) : (
+          <>
+            <Divider sx={{ my: 2 }}>OR</Divider>
+            <TextField
+              fullWidth
+              name="destination"
+              value={otpDestination}
+              onChange={(e)=>setOtpDestination(e.target.value)}
+              label="Email or Mobile"
+              margin="normal"
+              variant="outlined"
+              InputProps={{ startAdornment: (<InputAdornment position="start"><PhoneIphone /></InputAdornment>) }}
+            />
+            <Button onClick={requestOtp} variant="outlined" fullWidth disabled={loading}>
+              Send OTP
+            </Button>
+          </>
+        )}
 
         <Divider sx={{ my: 3 }}>
           <Typography variant="body2" color="textSecondary">

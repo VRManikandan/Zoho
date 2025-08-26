@@ -6,7 +6,14 @@ import {
   Typography,
   Divider,
   Box,
-  Alert
+  Alert,
+  Grid,
+  Checkbox,
+  FormControlLabel,
+  Link,
+  InputAdornment,
+  Select,
+  MenuItem
 } from '@mui/material';
 import {
   AccountCircle,
@@ -14,25 +21,37 @@ import {
   Email,
   Business,
   Phone,
-  Language
+  Language,
+  Public,
+  Place
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-const Register = () => {
+const countries = [
+  { code: '+91', name: 'India' },
+  { code: '+1', name: 'United States' },
+  { code: '+44', name: 'United Kingdom' },
+];
+
+const indiaStates = [
+  'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Delhi','Puducherry'
+];
+
+export default function Register() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const { register } = useAuth();
   const navigate = useNavigate();
+
   const [values, setValues] = useState({
-    full_name: '',
+    company_name: '',
     email: '',
     password: '',
-    organization_name: '',
-    organization_address: '',
-    organization_phone: '',
-    organization_email: '',
-    organization_website: ''
+    phone_cc: '+91',
+    phone: '',
+    country: 'India',
+    state: 'Tamil Nadu',
   });
 
   const handleChange = (e) => {
@@ -44,12 +63,16 @@ const Register = () => {
     setLoading(true);
     setErrorMessage('');
     try {
-      const result = await register(values);
-      if (result.success) {
-        navigate('/dashboard');
-      } else {
-        setErrorMessage(result.error || 'Registration failed');
-      }
+      const result = await register({
+        organization_name: values.company_name,
+        email: values.email,
+        password: values.password,
+        organization_phone: `${values.phone_cc} ${values.phone}`,
+        country: values.country,
+        state: values.state,
+      });
+      if (result?.success) navigate('/dashboard');
+      else setErrorMessage(result?.error || 'Registration failed');
     } catch (err) {
       setErrorMessage('An error occurred during registration');
     } finally {
@@ -58,31 +81,12 @@ const Register = () => {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        bgcolor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        p: 2
-      }}
-    >
-      <Card
-        sx={{
-          maxWidth: 500,
-          width: '100%',
-          p: 4,
-          borderRadius: 2,
-          boxShadow: 3
-        }}
-      >
-        <Box textAlign="center" mb={3}>
-          <Typography variant="h4" color="primary" gutterBottom>
-            ZBooks
-          </Typography>
-          <Typography variant="body2" color="textSecondary">
-            Create your account
+    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#fff' }}>
+      <Card sx={{ maxWidth: 520, width: '100%', p: 4, borderRadius: 2, boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
+        {/* Header */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h4" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+             <span style={{ color: '#111' }}>Kloudoz</span> Book
           </Typography>
         </Box>
 
@@ -93,35 +97,65 @@ const Register = () => {
         )}
 
         <form onSubmit={handleSubmit}>
+          {/* Company name */}
           <TextField
             fullWidth
-            name="full_name"
-            value={values.full_name}
+            name="company_name"
+            value={values.company_name}
             onChange={handleChange}
-            label="Full Name"
+            label="Company Name"
             margin="normal"
-            variant="outlined"
             required
-            InputProps={{
-              startAdornment: <AccountCircle sx={{ mr: 1 }} />
-            }}
+            InputProps={{ startAdornment: (
+              <InputAdornment position="start"><Business fontSize="small"/></InputAdornment>
+            )}}
           />
 
+          {/* Email */}
           <TextField
             fullWidth
             name="email"
             value={values.email}
             onChange={handleChange}
-            label="Email"
+            label="Email address"
             type="email"
             margin="normal"
-            variant="outlined"
             required
-            InputProps={{
-              startAdornment: <Email sx={{ mr: 1 }} />
-            }}
+            InputProps={{ startAdornment: (
+              <InputAdornment position="start"><Email fontSize="small"/></InputAdornment>
+            )}}
           />
 
+          {/* Mobile */}
+          <Grid container spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+            <Grid item xs={4} sm={3}>
+              <Select
+                fullWidth
+                size="medium"
+                name="phone_cc"
+                value={values.phone_cc}
+                onChange={handleChange}
+                startAdornment={<InputAdornment position="start"><Phone fontSize="small"/></InputAdornment>}
+              >
+                {countries.map((c) => (
+                  <MenuItem key={c.code} value={c.code}>{c.code}</MenuItem>
+                ))}
+              </Select>
+            </Grid>
+            <Grid item xs={8} sm={9}>
+              <TextField
+                fullWidth
+                name="phone"
+                value={values.phone}
+                onChange={handleChange}
+                label="Mobile Number"
+                inputMode="tel"
+                required
+              />
+            </Grid>
+          </Grid>
+
+          {/* Password */}
           <TextField
             fullWidth
             name="password"
@@ -130,112 +164,97 @@ const Register = () => {
             label="Password"
             type="password"
             margin="normal"
-            variant="outlined"
             required
             inputProps={{ minLength: 6 }}
-            InputProps={{
-              startAdornment: <Lock sx={{ mr: 1 }} />
-            }}
+            InputProps={{ startAdornment: (
+              <InputAdornment position="start"><Lock fontSize="small"/></InputAdornment>
+            )}}
           />
 
-          <Divider sx={{ my: 2 }}>
-            <Typography variant="body2" color="textSecondary">
-              Organization Details
-            </Typography>
-          </Divider>
+          {/* Country & State */}
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                fullWidth
+                name="country"
+                value={values.country}
+                onChange={handleChange}
+                label="Country"
+                InputProps={{ startAdornment: (
+                  <InputAdornment position="start"><Public fontSize="small"/></InputAdornment>
+                )}}
+              >
+                {countries.map((c) => (
+                  <MenuItem key={c.name} value={c.name}>{c.name}</MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                fullWidth
+                name="state"
+                value={values.state}
+                onChange={handleChange}
+                label="State"
+                InputProps={{ startAdornment: (
+                  <InputAdornment position="start"><Place fontSize="small"/></InputAdornment>
+                )}}
+              >
+                {indiaStates.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+              </TextField>
+            </Grid>
+          </Grid>
 
-          <TextField
-            fullWidth
-            name="organization_name"
-            value={values.organization_name}
-            onChange={handleChange}
-            label="Organization Name"
-            margin="normal"
-            variant="outlined"
-            required
-            InputProps={{
-              startAdornment: <Business sx={{ mr: 1 }} />
-            }}
-          />
+          {/* Data center note */}
+          <Typography variant="caption" sx={{ display: 'block', mt: 1.5, color: 'text.secondary' }}>
+            Your data will be in INDIA data center.
+          </Typography>
 
-          <TextField
-            fullWidth
-            name="organization_address"
-            value={values.organization_address}
-            onChange={handleChange}
-            label="Organization Address"
-            margin="normal"
-            variant="outlined"
-            required
-            multiline
-            rows={3}
-          />
-
-          <TextField
-            fullWidth
-            name="organization_phone"
-            value={values.organization_phone}
-            onChange={handleChange}
-            label="Organization Phone"
-            margin="normal"
-            variant="outlined"
-            required
-            InputProps={{
-              startAdornment: <Phone sx={{ mr: 1 }} />
-            }}
-          />
-
-          <TextField
-            fullWidth
-            name="organization_email"
-            value={values.organization_email}
-            onChange={handleChange}
-            label="Organization Email"
-            margin="normal"
-            variant="outlined"
-            required
-            type="email"
-            InputProps={{
-              startAdornment: <Email sx={{ mr: 1 }} />
-            }}
-          />
-
-          <TextField
-            fullWidth
-            name="organization_website"
-            value={values.organization_website}
-            onChange={handleChange}
-            label="Organization Website (Optional)"
-            margin="normal"
-            variant="outlined"
-            InputProps={{
-              startAdornment: <Language sx={{ mr: 1 }} />
-            }}
+          {/* Terms */}
+          <FormControlLabel
+            sx={{ mt: 1 }}
+            control={<Checkbox required/>}
+            label={
+              <Typography variant="body2" color="text.secondary">
+                I agree to the <Link href="#" underline="hover">Terms of Service</Link> and <Link href="#" underline="hover">Privacy Policy</Link>.
+              </Typography>
+            }
           />
 
           <Button
             type="submit"
             variant="contained"
-            color="primary"
             fullWidth
-            sx={{ mt: 3, py: 1.5 }}
+            sx={{ mt: 2.5, py: 1.4, backgroundColor: '#f5a623', '&:hover': { backgroundColor: '#f29b0b' } }}
             disabled={loading}
           >
-            {loading ? 'Creating...' : 'Create Account'}
+            {loading ? 'Creating…' : 'Create my account'}
           </Button>
-        </form>
 
-        <Box textAlign="center" mt={2}>
-          <Typography variant="body2" color="textSecondary">
-            Already have an account?{' '}
-            <a href="/login" style={{ color: '#1976d2' }}>
-              Sign in here
-            </a>
+          <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary' }}>
+            *No credit card required
           </Typography>
-        </Box>
+
+          <Divider sx={{ my: 2 }} />
+
+          {/* Social sign up */}
+          <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center' }}>
+            <Button variant="outlined" size="small">G</Button>
+            <Button variant="outlined" size="small">Zo</Button>
+            <Button variant="outlined" size="small">in</Button>
+            <Button variant="outlined" size="small"></Button>
+            <Button variant="outlined" size="small">f</Button>
+          </Box>
+
+          <Box textAlign="center" mt={2}>
+            <Typography variant="body2" color="text.secondary">
+              Already have an account? <Link href="/login" underline="hover">Log in</Link>
+            </Typography>
+          </Box>
+        </form>
       </Card>
     </Box>
   );
-};
-
-export default Register;
+}

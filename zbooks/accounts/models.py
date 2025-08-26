@@ -50,6 +50,34 @@ class User(AbstractBaseUser, PermissionsMixin):
         db_table = "users"
         indexes = [models.Index(fields=["email"])]
 
+
+class UserOrganization(models.Model):
+    ROLE_CHOICES = ("owner", "admin", "member")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="memberships")
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="members")
+    role = models.CharField(max_length=20, default="member")
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "user_organizations"
+        unique_together = ("user", "organization")
+
+
+class OneTimePassword(models.Model):
+    CHANNEL_CHOICES = (("email", "email"), ("phone", "phone"))
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="otps")
+    channel = models.CharField(max_length=10, choices=CHANNEL_CHOICES)
+    destination = models.CharField(max_length=255)
+    code = models.CharField(max_length=6)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "one_time_passwords"
+        indexes = [models.Index(fields=["destination", "is_used"]) ]
+
 class ChartOfAccounts(models.Model):
     ACCOUNT_TYPES = (
         ('asset', 'Asset'),

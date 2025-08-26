@@ -76,7 +76,11 @@ Content-Type: application/json
 ### 3. Refresh Token
 ```http
 POST /api/auth/refresh/
-Authorization: Bearer <refresh_token>
+Content-Type: application/json
+
+{
+  "refresh": "<refresh_token>"
+}
 ```
 
 ## 📊 Chart of Accounts
@@ -404,6 +408,55 @@ Content-Type: application/json
     }
   ]
 }
+```
+
+## 🏢 Organizations
+
+### 51. My Organizations
+```http
+GET /api/organizations/my/
+Authorization: Bearer <access_token>
+```
+
+### 52. Create Organization
+```http
+POST /api/organizations/
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "name": "Kloudoz",
+  "address": "Chennai, India",
+  "phone": "+91-90000-00000",
+  "email": "org@example.com",
+  "currency": "INR",
+  "timezone": "Asia/Kolkata",
+  "fiscal_year_start": "2025-04-01"
+}
+```
+
+### 53. Switch Active Organization
+```http
+POST /api/organizations/{id}/switch/
+Authorization: Bearer <access_token>
+```
+
+## 🔑 OTP Authentication
+
+### 54. Request OTP
+```http
+POST /api/auth/otp/request/
+Content-Type: application/json
+
+{ "destination": "admin@zbooks.com" }
+```
+
+### 55. Verify OTP
+```http
+POST /api/auth/otp/verify/
+Content-Type: application/json
+
+{ "destination": "admin@zbooks.com", "code": "123456" }
 ```
 
 ### 25. List Journal Entries

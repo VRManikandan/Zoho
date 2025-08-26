@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ChartOfAccounts, JournalEntry, JournalEntryLine, User
+from .models import ChartOfAccounts, JournalEntry, JournalEntryLine, User, Organization, UserOrganization
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -93,3 +93,35 @@ class JournalEntrySerializer(serializers.ModelSerializer):
             for line in lines_data:
                 JournalEntryLine.objects.create(entry=instance, **line)
         return instance
+
+
+class OrganizationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Organization
+        fields = (
+            "id",
+            "name",
+            "address",
+            "phone",
+            "email",
+            "website",
+            "gst_number",
+            "pan_number",
+            "currency",
+            "fiscal_year_start",
+            "timezone",
+            "created_at",
+        )
+        read_only_fields = ("id", "created_at")
+
+
+class MembershipSerializer(serializers.ModelSerializer):
+    organization = OrganizationSerializer(read_only=True)
+    organization_id = serializers.PrimaryKeyRelatedField(
+        queryset=Organization.objects.all(), source="organization", write_only=True
+    )
+
+    class Meta:
+        model = UserOrganization
+        fields = ("id", "organization", "organization_id", "role", "is_default", "created_at")
+        read_only_fields = ("id", "created_at")

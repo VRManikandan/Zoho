@@ -29,6 +29,7 @@ import TimeTracking from "./pages/TimeTracking";
 import Inventory from "./pages/Inventory";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import OrgSetup from "./pages/OrgSetup";
 
 // ✅ Only ONE ProtectedRoute
 const ProtectedRoute = ({ children }) => {
@@ -50,6 +51,7 @@ function App() {
               <Route path="/register" element={<Register />} />
 
               {/* Protected Routes */}
+              <Route path="/org-setup" element={<ProtectedRoute><OrgSetup /></ProtectedRoute>} />
               <Route
                 path="/"
                 element={

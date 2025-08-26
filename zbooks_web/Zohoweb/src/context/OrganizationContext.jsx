@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getOrganizationInfo } from '../api/organization';
+import { listMyOrganizations, switchOrganization, createOrganization } from '../api/organization';
 
 const OrganizationContext = createContext();
 
@@ -13,13 +13,16 @@ export const useOrganization = () => {
 
 export const OrganizationProvider = ({ children }) => {
   const [organization, setOrganization] = useState(null);
+  const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadOrganization = async () => {
       try {
-        const orgData = await getOrganizationInfo();
-        setOrganization(orgData);
+        const orgs = await listMyOrganizations();
+        setOrganizations(orgs);
+        const active = orgs.find(o => o.is_default) || orgs[0] || null;
+        setOrganization(active);
       } catch (error) {
         console.error('Failed to load organization:', error);
         // Set default organization for demo
@@ -48,10 +51,27 @@ export const OrganizationProvider = ({ children }) => {
     setOrganization(prev => ({ ...prev, ...newData }));
   };
 
+  const setActiveOrganization = async (orgId) => {
+    await switchOrganization(orgId);
+    const orgs = await listMyOrganizations();
+    setOrganizations(orgs);
+    const active = orgs.find(o => o.is_default) || orgs[0] || null;
+    setOrganization(active);
+  };
+
+  const createOrg = async (data) => {
+    const res = await createOrganization(data);
+    await setActiveOrganization(res.id);
+    return res;
+  };
+
   const value = {
     organization,
+    organizations,
     loading,
-    updateOrganization
+    updateOrganization,
+    setActiveOrganization,
+    createOrg
   };
 
   return (

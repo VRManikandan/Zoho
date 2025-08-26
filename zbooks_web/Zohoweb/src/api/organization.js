@@ -1,5 +1,20 @@
 import api from './auth';
 
+export const listMyOrganizations = async () => {
+  const res = await api.get('/organizations/my/');
+  return res.data;
+};
+
+export const createOrganization = async (data) => {
+  const res = await api.post('/organizations/', data);
+  return res.data;
+};
+
+export const switchOrganization = async (orgId) => {
+  const res = await api.post(`/organizations/${orgId}/switch/`);
+  return res.data;
+};
+
 export const getOrganizationInfo = async () => {
   try {
     const response = await api.get('/organization/info/');
