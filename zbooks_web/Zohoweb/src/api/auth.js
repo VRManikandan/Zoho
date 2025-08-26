@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-
 // Create axios instance with base configuration
+const API_BASE_URL = 'http://localhost:8000/api'; // Replace with your actual API URL
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -10,39 +10,52 @@ const api = axios.create({
   },
 });
 
-// Add token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Add request interceptor to include auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
-// Handle token refresh on 401
+// Add response interceptor to handle token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      const refreshToken = localStorage.getItem('refresh_token');
-      if (refreshToken) {
-        try {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (refreshToken) {
           const response = await axios.post(`${API_BASE_URL}/auth/refresh/`, {
             refresh: refreshToken
           });
+          
           const { access } = response.data;
           localStorage.setItem('access_token', access);
           
-          // Retry original request
-          error.config.headers.Authorization = `Bearer ${access}`;
-          return axios.request(error.config);
-        } catch (refreshError) {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          window.location.href = '/login';
+          // Retry the original request with new token
+          originalRequest.headers.Authorization = `Bearer ${access}`;
+          return api(originalRequest);
         }
+      } catch (refreshError) {
+        // Refresh failed, logout user
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
       }
     }
+
     return Promise.reject(error);
   }
 );
@@ -50,18 +63,32 @@ api.interceptors.response.use(
 export const loginUser = async (credentials) => {
   try {
     const response = await api.post('/auth/login/', credentials);
-    return response.data;
+    // SimpleJWT returns { access, refresh }
+    const { access, refresh } = response.data;
+    localStorage.setItem('access_token', access);
+    localStorage.setItem('refresh_token', refresh);
+    // fetch user info
+    const me = await api.get('/auth/me/');
+    return { user: me.data, tokens: { access, refresh } };
   } catch (error) {
-    throw new Error(error.response?.data?.message || 'Login failed');
+    throw new Error(error.response?.data?.detail || 'Login failed');
   }
 };
 
 export const registerUser = async (userData) => {
   try {
-    const response = await api.post('/auth/register/', userData);
-    return response.data;
+    // Backend Register accepts only user fields; organization will be added later
+    const payload = {
+      email: userData.email,
+      full_name: userData.full_name,
+      password: userData.password
+    };
+    await api.post('/auth/register/', payload);
+    // Immediately login
+    const loginRes = await loginUser({ email: userData.email, password: userData.password });
+    return loginRes;
   } catch (error) {
-    throw new Error(error.response?.data?.message || 'Registration failed');
+    throw new Error(error.response?.data?.detail || 'Registration failed');
   }
 };
 

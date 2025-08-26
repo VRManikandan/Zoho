@@ -7,6 +7,12 @@ urlpatterns = [
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema")),
     
+    path("api/chart-of-accounts/", include("accounts.urls")),
+    path("api/journal-entries/", include("accounts.urls")),
+
+    # Financial Management
+    path("api/", include("accounts.urls")), 
+
     # Authentication & User Management
     path("api/auth/", include("accounts.urls")),
     
@@ -21,6 +27,8 @@ urlpatterns = [
     # Financial Management
     path("api/chart-of-accounts/", include("accounts.urls")),
     path("api/journal-entries/", include("accounts.urls")),
+    
+    
     
     # Inventory & Projects
     path("api/inventory/", include("inventory.urls")),
@@ -44,3 +52,5 @@ urlpatterns = [
     path('api/items/', include('items.urls')),
     path('api/taxes/', include('taxes.urls')),
 ]
+
+

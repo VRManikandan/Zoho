@@ -1,355 +1,313 @@
-import React, { useState } from 'react';
-// import { Card, Tabs, Form, Input, Button, Switch, Select, Typography, Row, Col, Divider, message } from 'antd';
-import { Save as SaveIcon, Person as PersonIcon, AccountBalance as AccountBalanceIcon, Mail as MailIcon, Notifications as NotificationsIcon } from '@mui/icons-material';
-import { useOrganization } from '../context/OrganizationContext';
+import React, { useState } from "react";
+import {
+  Card,
+  Grid,
+  TextField,
+  Button,
+  Typography,
+  Switch,
+  FormControlLabel,
+  MenuItem,
+  Snackbar,
+} from "@mui/material";
+import SaveIcon from "@mui/icons-material/Save";
+import PersonIcon from "@mui/icons-material/Person";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import MailIcon from "@mui/icons-material/Mail";
 
-// const { Title, Text } = Typography;
-// const { Option } = Select;
-// const { TextArea } = Input;
+const currencies = ["USD", "EUR", "GBP", "INR"];
+const timezones = ["UTC", "America/New_York", "America/Chicago", "Asia/Kolkata"];
+const dateFormats = ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"];
 
 const Settings = () => {
   const [loading, setLoading] = useState(false);
-  const [generalForm] = Form.useForm();
-  const [financialForm] = Form.useForm();
-  const [emailForm] = Form.useForm();
-  const { organization } = useOrganization();
+  const [snackbar, setSnackbar] = useState({ open: false, message: "" });
 
-  const handleGeneralSave = async (values) => {
+  const [general, setGeneral] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    website: "",
+    address: "",
+  });
+
+  const [financial, setFinancial] = useState({
+    currency: "USD",
+    timezone: "Asia/Kolkata",
+    date_format: "YYYY-MM-DD",
+  });
+
+  const [email, setEmail] = useState({
+    smtp_host: "",
+    smtp_port: "",
+    smtp_username: "",
+    smtp_password: "",
+    from_email: "",
+    invoice_notifications: true,
+    payment_notifications: true,
+  });
+
+  const handleSave = async (type) => {
     setLoading(true);
     try {
-      // Save general settings
-      message.success('General settings saved successfully!');
+      // Simulate API call
+      setTimeout(() => {
+        setSnackbar({ open: true, message: `${type} settings saved successfully!` });
+        setLoading(false);
+      }, 1000);
     } catch (error) {
-      message.error('Failed to save general settings');
-    } finally {
+      setSnackbar({ open: true, message: `Failed to save ${type} settings.` });
       setLoading(false);
     }
   };
-
-  const handleFinancialSave = async (values) => {
-    setLoading(true);
-    try {
-      // Save financial settings
-      message.success('Financial settings saved successfully!');
-    } catch (error) {
-      message.error('Failed to save financial settings');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEmailSave = async (values) => {
-    setLoading(true);
-    try {
-      // Save email settings
-      message.success('Email settings saved successfully!');
-    } catch (error) {
-      message.error('Failed to save email settings');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const items = [
-    {
-      key: 'general',
-      label: (
-        <span>
-          <PersonIcon />
-          General
-        </span>
-      ),
-      children: (
-        <Card>
-          <Form
-            form={generalForm}
-            layout="vertical"
-            onFinish={handleGeneralSave}
-            initialValues={organization}
-          >
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="name"
-                  label="Company Name"
-                  rules={[{ required: true, message: 'Please input company name!' }]}
-                >
-                  <Input />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="email"
-                  label="Company Email"
-                  rules={[
-                    { required: true, message: 'Please input company email!' },
-                    { type: 'email', message: 'Please enter a valid email!' }
-                  ]}
-                >
-                  <Input />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="phone"
-                  label="Company Phone"
-                  rules={[{ required: true, message: 'Please input company phone!' }]}
-                >
-                  <Input />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="website"
-                  label="Company Website"
-                >
-                  <Input />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Form.Item
-              name="address"
-              label="Company Address"
-              rules={[{ required: true, message: 'Please input company address!' }]}
-            >
-              <TextArea rows={3} />
-            </Form.Item>
-
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="gst_number"
-                  label="GST Number"
-                >
-                  <Input />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="pan_number"
-                  label="PAN Number"
-                >
-                  <Input />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Form.Item>
-              <Button type="primary" htmlType="submit" loading={loading} icon={<SaveIcon />}>
-                Save General Settings
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
-      ),
-    },
-    {
-      key: 'financial',
-      label: (
-        <span>
-          <AccountBalanceIcon />
-          Financial
-        </span>
-      ),
-      children: (
-        <Card>
-          <Form
-            form={financialForm}
-            layout="vertical"
-            onFinish={handleFinancialSave}
-            initialValues={organization}
-          >
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="currency"
-                  label="Default Currency"
-                  rules={[{ required: true, message: 'Please select currency!' }]}
-                >
-                  <Select>
-                    <Option value="USD">USD - US Dollar</Option>
-                    <Option value="EUR">EUR - Euro</Option>
-                    <Option value="GBP">GBP - British Pound</Option>
-                    <Option value="INR">INR - Indian Rupee</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="fiscal_year_start"
-                  label="Fiscal Year Start"
-                  rules={[{ required: true, message: 'Please select fiscal year start!' }]}
-                >
-                  <Select>
-                    <Option value="01-01">January 1st</Option>
-                    <Option value="04-01">April 1st</Option>
-                    <Option value="07-01">July 1st</Option>
-                    <Option value="10-01">October 1st</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="timezone"
-                  label="Timezone"
-                  rules={[{ required: true, message: 'Please select timezone!' }]}
-                >
-                  <Select>
-                    <Option value="UTC">UTC</Option>
-                    <Option value="America/New_York">Eastern Time</Option>
-                    <Option value="America/Chicago">Central Time</Option>
-                    <Option value="America/Denver">Mountain Time</Option>
-                    <Option value="America/Los_Angeles">Pacific Time</Option>
-                    <Option value="Asia/Kolkata">India Standard Time</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="date_format"
-                  label="Date Format"
-                  rules={[{ required: true, message: 'Please select date format!' }]}
-                >
-                  <Select>
-                    <Option value="MM/DD/YYYY">MM/DD/YYYY</Option>
-                    <Option value="DD/MM/YYYY">DD/MM/YYYY</Option>
-                    <Option value="YYYY-MM-DD">YYYY-MM-DD</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Form.Item>
-              <Button type="primary" htmlType="submit" loading={loading} icon={<SaveIcon />}>
-                Save Financial Settings
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
-      ),
-    },
-    {
-      key: 'email',
-      label: (
-        <span>
-          <MailIcon />
-          Email & Notifications
-        </span>
-      ),
-      children: (
-        <Card>
-          <Form
-            form={emailForm}
-            layout="vertical"
-            onFinish={handleEmailSave}
-          >
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="smtp_host"
-                  label="SMTP Host"
-                  rules={[{ required: true, message: 'Please input SMTP host!' }]}
-                >
-                  <Input placeholder="smtp.gmail.com" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="smtp_port"
-                  label="SMTP Port"
-                  rules={[{ required: true, message: 'Please input SMTP port!' }]}
-                >
-                  <Input placeholder="587" />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="smtp_username"
-                  label="SMTP Username"
-                  rules={[{ required: true, message: 'Please input SMTP username!' }]}
-                >
-                  <Input placeholder="your-email@gmail.com" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="smtp_password"
-                  label="SMTP Password"
-                  rules={[{ required: true, message: 'Please input SMTP password!' }]}
-                >
-                  <Input.Password placeholder="App Password" />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Form.Item
-              name="from_email"
-              label="From Email"
-              rules={[
-                { required: true, message: 'Please input from email!' },
-                { type: 'email', message: 'Please enter a valid email!' }
-              ]}
-            >
-              <Input placeholder="noreply@company.com" />
-            </Form.Item>
-
-            <Divider>Notification Preferences</Divider>
-
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="invoice_notifications"
-                  label="Invoice Notifications"
-                  valuePropName="checked"
-                >
-                  <Switch />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="payment_notifications"
-                  label="Payment Notifications"
-                  valuePropName="checked"
-                >
-                  <Switch />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            <Form.Item>
-              <Button type="primary" htmlType="submit" loading={loading} icon={<SaveIcon />}>
-                Save Email Settings
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
-      ),
-    },
-  ];
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Title level={3}>Settings</Title>
-      <Text type="secondary">Manage your organization settings and preferences</Text>
-      
-      <div style={{ marginTop: '24px' }}>
-        <Tabs
-          defaultActiveKey="general"
-          items={items}
-          size="large"
-          tabPosition="top"
-        />
-      </div>
+    <div style={{ padding: 24 }}>
+      <Typography variant="h5" gutterBottom>
+        Settings
+      </Typography>
+
+      {/* General Settings */}
+      <Card sx={{ p: 2, mb: 2 }}>
+        <Typography variant="subtitle1" gutterBottom>
+          <PersonIcon sx={{ mr: 1 }} /> General
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="Company Name"
+              fullWidth
+              required
+              value={general.name}
+              onChange={(e) => setGeneral({ ...general, name: e.target.value })}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="Company Email"
+              type="email"
+              required
+              fullWidth
+              value={general.email}
+              onChange={(e) => setGeneral({ ...general, email: e.target.value })}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="Company Phone"
+              fullWidth
+              value={general.phone}
+              onChange={(e) => setGeneral({ ...general, phone: e.target.value })}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="Company Website"
+              fullWidth
+              value={general.website}
+              onChange={(e) => setGeneral({ ...general, website: e.target.value })}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              label="Company Address"
+              fullWidth
+              multiline
+              rows={3}
+              value={general.address}
+              onChange={(e) => setGeneral({ ...general, address: e.target.value })}
+            />
+          </Grid>
+        </Grid>
+        <Button
+          variant="contained"
+          startIcon={<SaveIcon />}
+          sx={{ mt: 2 }}
+          disabled={loading}
+          onClick={() => handleSave("General")}
+        >
+          Save General Settings
+        </Button>
+      </Card>
+
+      {/* Financial Settings */}
+      <Card sx={{ p: 2, mb: 2 }}>
+        <Typography variant="subtitle1" gutterBottom>
+          <AccountBalanceIcon sx={{ mr: 1 }} /> Financial
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              label="Default Currency"
+              select
+              fullWidth
+              value={financial.currency}
+              onChange={(e) =>
+                setFinancial({ ...financial, currency: e.target.value })
+              }
+            >
+              {currencies.map((c) => (
+                <MenuItem key={c} value={c}>
+                  {c}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              label="Timezone"
+              select
+              fullWidth
+              value={financial.timezone}
+              onChange={(e) =>
+                setFinancial({ ...financial, timezone: e.target.value })
+              }
+            >
+              {timezones.map((tz) => (
+                <MenuItem key={tz} value={tz}>
+                  {tz}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              label="Date Format"
+              select
+              fullWidth
+              value={financial.date_format}
+              onChange={(e) =>
+                setFinancial({ ...financial, date_format: e.target.value })
+              }
+            >
+              {dateFormats.map((df) => (
+                <MenuItem key={df} value={df}>
+                  {df}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+        </Grid>
+        <Button
+          variant="contained"
+          startIcon={<SaveIcon />}
+          sx={{ mt: 2 }}
+          disabled={loading}
+          onClick={() => handleSave("Financial")}
+        >
+          Save Financial Settings
+        </Button>
+      </Card>
+
+      {/* Email & Notifications */}
+      <Card sx={{ p: 2 }}>
+        <Typography variant="subtitle1" gutterBottom>
+          <MailIcon sx={{ mr: 1 }} /> Email & Notifications
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="SMTP Host"
+              fullWidth
+              value={email.smtp_host}
+              onChange={(e) =>
+                setEmail({ ...email, smtp_host: e.target.value })
+              }
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="SMTP Port"
+              fullWidth
+              value={email.smtp_port}
+              onChange={(e) =>
+                setEmail({ ...email, smtp_port: e.target.value })
+              }
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="SMTP Username"
+              fullWidth
+              value={email.smtp_username}
+              onChange={(e) =>
+                setEmail({ ...email, smtp_username: e.target.value })
+              }
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="SMTP Password"
+              type="password"
+              fullWidth
+              value={email.smtp_password}
+              onChange={(e) =>
+                setEmail({ ...email, smtp_password: e.target.value })
+              }
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              label="From Email"
+              type="email"
+              fullWidth
+              value={email.from_email}
+              onChange={(e) =>
+                setEmail({ ...email, from_email: e.target.value })
+              }
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={email.invoice_notifications}
+                  onChange={(e) =>
+                    setEmail({
+                      ...email,
+                      invoice_notifications: e.target.checked,
+                    })
+                  }
+                />
+              }
+              label="Invoice Notifications"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={email.payment_notifications}
+                  onChange={(e) =>
+                    setEmail({
+                      ...email,
+                      payment_notifications: e.target.checked,
+                    })
+                  }
+                />
+              }
+              label="Payment Notifications"
+            />
+          </Grid>
+        </Grid>
+        <Button
+          variant="contained"
+          startIcon={<SaveIcon />}
+          sx={{ mt: 2 }}
+          disabled={loading}
+          onClick={() => handleSave("Email")}
+        >
+          Save Email Settings
+        </Button>
+      </Card>
+
+      {/* Snackbar Notification */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ open: false, message: "" })}
+        message={snackbar.message}
+      />
     </div>
   );
 };
