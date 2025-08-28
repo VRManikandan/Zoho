@@ -77,18 +77,41 @@ export const loginUser = async (credentials) => {
 
 export const registerUser = async (userData) => {
   try {
-    // Backend Register accepts only user fields; organization will be added later
+    // Support both the new Register form and any older shape
+    const companyName = userData.company_name || userData.organization_name || userData.full_name || "";
+
+    // Prefer explicit fields; fallback to parsing a combined phone string like "+91 9876543210"
+    let phoneCountryCode = userData.phone_cc || "";
+    let phoneNumber = userData.phone || "";
+
+    if ((!phoneCountryCode || !phoneNumber) && userData.organization_phone) {
+      const parts = String(userData.organization_phone).trim().split(/\s+/);
+      if (parts.length >= 2) {
+        phoneCountryCode = phoneCountryCode || parts[0];
+        phoneNumber = phoneNumber || parts.slice(1).join(" ");
+      }
+    }
+
     const payload = {
       email: userData.email,
-      full_name: userData.full_name,
-      password: userData.password
+      password: userData.password,
+      company_name: companyName,
+      phone_cc: phoneCountryCode,
+      phone: phoneNumber,
+      country: userData.country || "India",
+      state: userData.state || "Tamil Nadu",
     };
+
     await api.post('/auth/register/', payload);
+
     // Immediately login
     const loginRes = await loginUser({ email: userData.email, password: userData.password });
     return loginRes;
   } catch (error) {
-    throw new Error(error.response?.data?.detail || 'Registration failed');
+    const detail = error.response?.data?.detail
+      || (typeof error.response?.data === 'string' ? error.response.data : null)
+      || 'Registration failed';
+    throw new Error(detail);
   }
 };
 

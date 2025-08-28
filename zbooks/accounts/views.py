@@ -5,6 +5,12 @@ from rest_framework.response import Response
 from datetime import timedelta
 from django.utils import timezone
 import random
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.core.mail import send_mail
+from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 from .models import (
     User,
@@ -21,6 +27,83 @@ from .serializers import (
     JournalEntrySerializer,
     OrganizationSerializer,
 )
+
+
+def mask_destination(destination):
+    """Mask email or phone number for privacy"""
+    if not destination:
+        return ""
+    
+    if "@" in destination:
+        # Email masking
+        username, domain = destination.split("@")
+        if len(username) <= 2:
+            masked_username = username[0] + "*"
+        else:
+            masked_username = username[:2] + "*" * max(1, len(username) - 2)
+        
+        domain_parts = domain.split(".")
+        if len(domain_parts[0]) <= 1:
+            masked_domain = domain
+        else:
+            masked_domain = domain_parts[0][0] + "*" * (len(domain_parts[0]) - 1) + "." + ".".join(domain_parts[1:])
+        
+        return f"{masked_username}@{masked_domain}"
+    else:
+        # Phone masking - show last 2 digits
+        return "*" * max(0, len(destination) - 2) + destination[-2:]
+
+
+def send_otp_email(email, code, full_name):
+    """Send OTP via email"""
+    try:
+        subject = "Your ZBooks Login OTP"
+        message = f"""Hi {full_name},
+
+Your OTP for ZBooks login is: {code}
+
+This OTP will expire in 10 minutes.
+
+If you didn't request this, please ignore this email.
+
+Best regards,
+ZBooks Team"""
+        
+        # Check if email backend is properly configured
+        from django.conf import settings
+        if settings.EMAIL_BACKEND == 'django.core.mail.backends.console.EmailBackend':
+            logger.warning("Using console email backend - emails will only appear in console")
+            print(f"📧 EMAIL OTP for {email}: {code}")
+        
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@zbooks.com'),
+            recipient_list=[email],
+            fail_silently=False,
+        )
+        logger.info(f"OTP email sent successfully to {mask_destination(email)}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send OTP email to {mask_destination(email)}: {str(e)}")
+        print(f"❌ EMAIL ERROR: {str(e)}")
+        return False
+
+
+def send_otp_sms(phone, code):
+    """Send OTP via SMS - placeholder for SMS service integration"""
+    try:
+        # TODO: Integrate with SMS service provider (Twilio, AWS SNS, etc.)
+        # For now, just log the OTP
+        logger.info(f"SMS OTP for {mask_destination(phone)}: {code}")
+        
+        # In development, you can print to console
+        print(f"📱 SMS OTP for {phone}: {code}")
+        
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send OTP SMS to {mask_destination(phone)}: {str(e)}")
+        return False
 
 
 class RegisterView(generics.CreateAPIView):
@@ -85,24 +168,106 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         membership.save()
         return Response({"active_organization": OrganizationSerializer(org).data})
 
+    @action(detail=False, methods=["post"], url_path="create")
+    def create_organization(self, request):
+        """Create a new organization for logged-in user"""
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            org = serializer.save()
+            # Create membership with owner role
+            UserOrganization.objects.create(
+                user=request.user, 
+                organization=org, 
+                role="owner", 
+                is_default=False  # Don't make it default automatically
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(["POST"])
 @permission_classes([permissions.AllowAny])
 def otp_request(request):
-    destination = request.data.get("destination")
-    if not destination:
-        return Response({"detail": "destination required"}, status=status.HTTP_400_BAD_REQUEST)
-    channel = "email" if "@" in destination else "phone"
     try:
-        user = User.objects.get(email=destination) if channel == "email" else User.objects.get(phone=destination)
-    except User.DoesNotExist:
-        return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        destination = request.data.get("destination")
+        if not destination:
+            return Response({"detail": "destination required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        logger.info(f"OTP request for destination: {mask_destination(destination)}")
+        
+        channel = "email" if "@" in destination else "phone"
+        try:
+            if channel == "email":
+                user = User.objects.get(email=destination)
+            else:
+                # Improved phone lookup - try multiple formats
+                clean_phone = destination.replace("+", "").replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+                
+                # Try exact match first
+                user = None
+                try:
+                    user = User.objects.get(phone=destination)
+                except User.DoesNotExist:
+                    # Try with cleaned phone number
+                    try:
+                        user = User.objects.get(phone=clean_phone)
+                    except User.DoesNotExist:
+                        # Try contains search as last resort
+                        users = User.objects.filter(phone__icontains=clean_phone[-10:])  # Last 10 digits
+                        if users.exists():
+                            user = users.first()
+                        else:
+                            raise User.DoesNotExist()
+                
+        except User.DoesNotExist:
+            logger.warning(f"User not found for destination: {mask_destination(destination)}")
+            return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        logger.info(f"Found user: {user.email} for OTP request")
+        
+    except Exception as e:
+        logger.error(f"Unexpected error in otp_request: {str(e)}", exc_info=True)
+        return Response({"detail": f"Internal error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    code = f"{random.randint(100000, 999999)}"
-    expires = timezone.now() + timedelta(minutes=10)
-    OneTimePassword.objects.create(user=user, channel=channel, destination=destination, code=code, expires_at=expires)
-    # TODO: integrate with email/SMS provider to actually send OTP
-    return Response({"message": "OTP sent", "expires_in": 600})
+    try:
+        # Generate 6-digit OTP
+        code = f"{random.randint(100000, 999999)}"
+        expires = timezone.now() + timedelta(minutes=10)
+        
+        logger.info(f"Generated OTP for user {user.email}, expires at {expires}")
+        
+        # Create OTP record
+        OneTimePassword.objects.create(
+            user=user, 
+            channel=channel, 
+            destination=destination, 
+            code=code, 
+            expires_at=expires
+        )
+        
+        logger.info(f"OTP record created successfully")
+        
+        # Send OTP via appropriate channel
+        delivery_success = False
+        if channel == "email":
+            delivery_success = send_otp_email(destination, code, user.full_name)
+            if not delivery_success:
+                logger.error(f"Failed to send OTP email to {mask_destination(destination)}")
+                return Response({"detail": "Failed to send OTP. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            delivery_success = send_otp_sms(destination, code)
+            if not delivery_success:
+                logger.error(f"Failed to send OTP SMS to {mask_destination(destination)}")
+                return Response({"detail": "Failed to send OTP. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        logger.info(f"OTP sent successfully via {channel}")
+        return Response({
+            "message": "OTP sent successfully"
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in OTP generation/sending: {str(e)}", exc_info=True)
+        return Response({"detail": f"OTP processing error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(["POST"])
@@ -110,38 +275,37 @@ def otp_request(request):
 def otp_verify(request):
     destination = request.data.get("destination")
     code = request.data.get("code")
+    
     if not destination or not code:
         return Response({"detail": "destination and code required"}, status=status.HTTP_400_BAD_REQUEST)
+    
     now = timezone.now()
     otp = (
-        OneTimePassword.objects.filter(destination=destination, code=code, is_used=False, expires_at__gte=now)
+        OneTimePassword.objects.filter(
+            destination=destination, 
+            code=code, 
+            is_used=False, 
+            expires_at__gte=now
+        )
         .order_by("-id")
         .first()
     )
+    
     if not otp:
         return Response({"detail": "Invalid or expired OTP"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Mark OTP as used
     otp.is_used = True
     otp.save()
-    from rest_framework_simplejwt.tokens import RefreshToken
-
+    
+    # Generate JWT tokens
     refresh = RefreshToken.for_user(otp.user)
+    
     return Response({
         "refresh": str(refresh),
         "access": str(refresh.access_token),
         "user": UserSerializer(otp.user).data,
     })
-from rest_framework import generics, permissions
-from .models import User
-from .serializers import RegisterSerializer, UserSerializer
-
-class RegisterView(generics.CreateAPIView):
-    permission_classes = [permissions.AllowAny]
-    serializer_class = RegisterSerializer
-
-class MeView(generics.RetrieveAPIView):
-    serializer_class = UserSerializer
-    def get_object(self):
-        return self.request.user
 
 
 

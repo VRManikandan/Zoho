@@ -47,7 +47,7 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // fetchDashboardData();
+    fetchDashboardData();
   }, []);
 
   const fetchDashboardData = async () => {

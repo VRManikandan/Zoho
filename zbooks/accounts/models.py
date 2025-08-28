@@ -52,10 +52,14 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class UserOrganization(models.Model):
-    ROLE_CHOICES = ("owner", "admin", "member")
+    ROLE_CHOICES = (
+        ("owner", "Owner"),
+        ("admin", "Admin"), 
+        ("member", "Member")
+    )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="memberships")
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="members")
-    role = models.CharField(max_length=20, default="member")
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="member")
     is_default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

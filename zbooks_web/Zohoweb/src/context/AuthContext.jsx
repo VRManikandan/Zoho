@@ -54,14 +54,24 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const getUserInfo = async (token) => {
-    // This would typically call your API to get user info
-    // For now, return a mock user
-    return {
-      id: 1,
-      email: 'admin@zbooks.com',
-      full_name: 'Admin User',
-      role: 'admin'
-    };
+    try {
+      const response = await fetch('http://localhost:8000/api/auth/me/', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch user info');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching user info:', error);
+      throw error;
+    }
   };
 
   const login = async (credentials) => {
@@ -105,6 +115,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('refresh_token');
   };
 
+  const loginWithOTP = async (tokens, userData) => {
+    setUser(userData);
+    setTokens(tokens);
+    localStorage.setItem('access_token', tokens.access);
+    localStorage.setItem('refresh_token', tokens.refresh);
+  };
+
   const value = {
     user,
     tokens,
@@ -112,6 +129,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    loginWithOTP,
     isAuthenticated: !!user
   };
 
