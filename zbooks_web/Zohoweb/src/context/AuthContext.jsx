@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { loginUser, registerUser, refreshToken } from '../api/auth';
+import { loginUser, registerUser, refreshToken, logoutUser, switchOrganization } from '../api/auth';
 
 const AuthContext = createContext();
 
@@ -13,6 +13,7 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [currentOrganization, setCurrentOrganization] = useState(null);
   const [tokens, setTokens] = useState({
     access: localStorage.getItem('access_token'),
     refresh: localStorage.getItem('refresh_token')
@@ -28,6 +29,7 @@ export const AuthProvider = ({ children }) => {
           // Verify token and get user info
           const userInfo = await getUserInfo(accessToken);
           setUser(userInfo);
+          setCurrentOrganization(userInfo.current_organization);
         } catch (error) {
           // Token expired, try to refresh
           try {
@@ -40,6 +42,7 @@ export const AuthProvider = ({ children }) => {
               
               const userInfo = await getUserInfo(newTokens.access);
               setUser(userInfo);
+              setCurrentOrganization(userInfo.current_organization);
             }
           } catch (refreshError) {
             // Both tokens failed, logout
@@ -80,6 +83,7 @@ export const AuthProvider = ({ children }) => {
       const { user: userData, tokens: newTokens } = response;
       
       setUser(userData);
+      setCurrentOrganization(userData.current_organization);
       setTokens(newTokens);
       
       localStorage.setItem('access_token', newTokens.access);
@@ -97,6 +101,7 @@ export const AuthProvider = ({ children }) => {
       const { user: newUser, tokens: newTokens } = response;
       
       setUser(newUser);
+      setCurrentOrganization(newUser.current_organization);
       setTokens(newTokens);
       
       localStorage.setItem('access_token', newTokens.access);
@@ -108,11 +113,33 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setTokens({ access: null, refresh: null });
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+  const logout = async () => {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      setCurrentOrganization(null);
+      setTokens({ access: null, refresh: null });
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+    }
+  };
+
+  const switchOrg = async (organizationId) => {
+    try {
+      const response = await switchOrganization(organizationId);
+      setCurrentOrganization(response.current_organization);
+      
+      // Refresh user data to get updated organization info
+      const userInfo = await getUserInfo(tokens.access);
+      setUser(userInfo);
+      
+      return { success: true, organization: response.current_organization };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   };
 
   const loginWithOTP = async (tokens, userData) => {
@@ -124,12 +151,14 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
+    currentOrganization,
     tokens,
     loading,
     login,
     register,
     logout,
     loginWithOTP,
+    switchOrganization: switchOrg,
     isAuthenticated: !!user
   };
 

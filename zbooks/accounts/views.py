@@ -6,9 +6,14 @@ from datetime import timedelta
 from django.utils import timezone
 import random
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from django.core.mail import send_mail
 from django.conf import settings
 import logging
+from django.db import transaction
+from django.core.cache import cache
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 
 logger = logging.getLogger(__name__)
 
@@ -185,6 +190,14 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+def check_rate_limit(key, limit=5, window=300):
+    """Simple rate limiting using cache"""
+    current = cache.get(key, 0)
+    if current >= limit:
+        return False
+    cache.set(key, current + 1, window)
+    return True
+
 @api_view(["POST"])
 @permission_classes([permissions.AllowAny])
 def otp_request(request):
@@ -192,6 +205,14 @@ def otp_request(request):
         destination = request.data.get("destination")
         if not destination:
             return Response({"detail": "destination required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Rate limiting - 5 requests per 5 minutes per destination
+        rate_limit_key = f"otp_request:{destination}"
+        if not check_rate_limit(rate_limit_key, limit=5, window=300):
+            return Response(
+                {"detail": "Too many OTP requests. Please try again in 5 minutes."}, 
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
         
         logger.info(f"OTP request for destination: {mask_destination(destination)}")
         
@@ -306,6 +327,57 @@ def otp_verify(request):
         "access": str(refresh.access_token),
         "user": UserSerializer(otp.user).data,
     })
+
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def logout_view(request):
+    """Logout user and blacklist refresh token"""
+    try:
+        refresh_token = request.data.get("refresh_token")
+        if refresh_token:
+            try:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            except Exception as e:
+                logger.warning(f"Failed to blacklist token: {str(e)}")
+        
+        return Response({"message": "Successfully logged out"}, status=status.HTTP_200_OK)
+    except Exception as e:
+        logger.error(f"Logout error: {str(e)}")
+        return Response({"detail": "Logout failed"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def switch_organization(request):
+    """Switch user's default organization"""
+    try:
+        org_id = request.data.get("organization_id")
+        if not org_id:
+            return Response({"detail": "organization_id required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if user has access to this organization
+        try:
+            membership = UserOrganization.objects.get(user=request.user, organization_id=org_id)
+        except UserOrganization.DoesNotExist:
+            return Response({"detail": "Access denied to this organization"}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Switch default organization
+        with transaction.atomic():
+            UserOrganization.objects.filter(user=request.user).update(is_default=False)
+            membership.is_default = True
+            membership.save()
+        
+        return Response({
+            "message": "Organization switched successfully",
+            "current_organization": OrganizationSerializer(membership.organization).data,
+            "role": membership.role
+        })
+        
+    except Exception as e:
+        logger.error(f"Organization switch error: {str(e)}")
+        return Response({"detail": "Failed to switch organization"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 

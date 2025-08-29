@@ -21,7 +21,7 @@ class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra):
         if not email:
             raise ValueError("Email required")
-        email = self.normalize_email(email)
+        email = self.normalize_email(email)   
         user = self.model(email=email, **extra)
         user.set_password(password)
         user.save(using=self._db)
@@ -33,18 +33,27 @@ class UserManager(BaseUserManager):
         return self.create_user(email, password, **extra)
 
 class User(AbstractBaseUser, PermissionsMixin):
-    ROLE_CHOICES = (("admin","admin"),("accountant","accountant"),("user","user"))
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, null=True, blank=True)
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=150)
     phone = models.CharField(max_length=20, blank=True, null=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="user")
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = "email"
     objects = UserManager()
+
+    @property
+    def current_organization(self):
+        """Get user's current/default organization"""
+        membership = self.memberships.filter(is_default=True).first()
+        return membership.organization if membership else None
+    
+    @property
+    def current_role(self):
+        """Get user's role in current organization"""
+        membership = self.memberships.filter(is_default=True).first()
+        return membership.role if membership else None
 
     class Meta:
         db_table = "users"
@@ -55,6 +64,7 @@ class UserOrganization(models.Model):
     ROLE_CHOICES = (
         ("owner", "Owner"),
         ("admin", "Admin"), 
+        ("accountant", "Accountant"),
         ("member", "Member")
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="memberships")
@@ -66,6 +76,13 @@ class UserOrganization(models.Model):
     class Meta:
         db_table = "user_organizations"
         unique_together = ("user", "organization")
+        indexes = [models.Index(fields=["user", "is_default"])]
+    
+    def save(self, *args, **kwargs):
+        # Ensure only one default organization per user
+        if self.is_default:
+            UserOrganization.objects.filter(user=self.user, is_default=True).update(is_default=False)
+        super().save(*args, **kwargs)
 
 
 class OneTimePassword(models.Model):

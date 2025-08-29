@@ -77,27 +77,14 @@ export const loginUser = async (credentials) => {
 
 export const registerUser = async (userData) => {
   try {
-    // Support both the new Register form and any older shape
-    const companyName = userData.company_name || userData.organization_name || userData.full_name || "";
-
-    // Prefer explicit fields; fallback to parsing a combined phone string like "+91 9876543210"
-    let phoneCountryCode = userData.phone_cc || "";
-    let phoneNumber = userData.phone || "";
-
-    if ((!phoneCountryCode || !phoneNumber) && userData.organization_phone) {
-      const parts = String(userData.organization_phone).trim().split(/\s+/);
-      if (parts.length >= 2) {
-        phoneCountryCode = phoneCountryCode || parts[0];
-        phoneNumber = phoneNumber || parts.slice(1).join(" ");
-      }
-    }
-
+    // Standardized payload structure matching backend expectations
     const payload = {
       email: userData.email,
       password: userData.password,
-      company_name: companyName,
-      phone_cc: phoneCountryCode,
-      phone: phoneNumber,
+      full_name: userData.full_name || userData.company_name || "",
+      company_name: userData.company_name || userData.organization_name || "",
+      phone_cc: userData.phone_cc || "+91",
+      phone: userData.phone || "",
       country: userData.country || "India",
       state: userData.state || "Tamil Nadu",
     };
@@ -108,10 +95,31 @@ export const registerUser = async (userData) => {
     const loginRes = await loginUser({ email: userData.email, password: userData.password });
     return loginRes;
   } catch (error) {
-    const detail = error.response?.data?.detail
-      || (typeof error.response?.data === 'string' ? error.response.data : null)
-      || 'Registration failed';
-    throw new Error(detail);
+    // Better error handling
+    const errorData = error.response?.data;
+    let errorMessage = 'Registration failed';
+    
+    if (typeof errorData === 'object' && errorData) {
+      // Handle field-specific errors
+      const fieldErrors = [];
+      Object.entries(errorData).forEach(([field, errors]) => {
+        if (Array.isArray(errors)) {
+          fieldErrors.push(`${field}: ${errors.join(', ')}`);
+        } else if (typeof errors === 'string') {
+          fieldErrors.push(`${field}: ${errors}`);
+        }
+      });
+      
+      if (fieldErrors.length > 0) {
+        errorMessage = fieldErrors.join('; ');
+      } else if (errorData.detail) {
+        errorMessage = errorData.detail;
+      }
+    } else if (typeof errorData === 'string') {
+      errorMessage = errorData;
+    }
+    
+    throw new Error(errorMessage);
   }
 };
 
@@ -128,12 +136,24 @@ export const refreshToken = async (refreshTokenValue) => {
 
 export const logoutUser = async () => {
   try {
-    await api.post('/auth/logout/');
+    const refreshToken = localStorage.getItem('refresh_token');
+    await api.post('/auth/logout/', { refresh_token: refreshToken });
   } catch (error) {
     console.error('Logout error:', error);
   } finally {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+  }
+};
+
+export const switchOrganization = async (organizationId) => {
+  try {
+    const response = await api.post('/auth/switch-organization/', {
+      organization_id: organizationId
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.detail || 'Failed to switch organization');
   }
 };
 

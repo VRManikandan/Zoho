@@ -64,10 +64,12 @@ export default function Register() {
     setErrorMessage('');
     try {
       const result = await register({
-        organization_name: values.company_name,
+        full_name: values.company_name, // Use company name as full name for now
+        company_name: values.company_name,
         email: values.email,
         password: values.password,
-        organization_phone: `${values.phone_cc} ${values.phone}`,
+        phone_cc: values.phone_cc,
+        phone: values.phone,
         country: values.country,
         state: values.state,
       });
